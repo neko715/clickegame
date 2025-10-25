@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>タッチ連打対決（10秒）</title>
+<style>
+  html,body { height:100%; margin:0; font-family:sans-serif; }
+  .game {
+    position:relative;
+    width:100%;
+    height:100vh;
+    overflow:hidden;
+    touch-action: none;
+  }
+  .half {
+    position:absolute;
+    left:0; right:0;
+  }
+  .top {
+    background:#e33;
+    top:0;
+  }
+  .bottom {
+    background:#3377ff;
+    bottom:0;
+  }
+  .divider {
+    position:absolute;
+    left:0; right:0;
+    height:6px;
+    background:white;
+    box-shadow:0 0 8px rgba(0,0,0,0.3);
+    transform:translateY(-50%);
+    z-index:10;
+  }
+  .hud {
+    position:absolute;
+    top:10px; left:10px;
+    z-index:20;
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .timer {
+    background:rgba(0,0,0,0.6);
+    color:#fff;
+    padding:6px 10px;
+    border-radius:6px;
+    font-weight:bold;
+    min-width:60px;
+    text-align:center;
+  }
+  .startBtn {
+    background:#fff;
+    border:none;
+    padding:6px 10px;
+    border-radius:6px;
+    font-weight:bold;
+    cursor:pointer;
+  }
+  .startBtn[disabled]{opacity:0.6;cursor:default;}
+  .result {
+    position:absolute;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:rgba(0,0,0,0.5);
+    color:#fff;
+    font-size:24px;
+    font-weight:bold;
+    z-index:30;
+    flex-direction:column;
+  }
+  .result button{
+    margin-top:10px;
+    padding:8px 12px;
+    border:none;
+    border-radius:6px;
+    font-weight:bold;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="game" id="game">
+    <div class="half top" id="topHalf"></div>
+    <div class="half bottom" id="bottomHalf"></div>
+    <div class="divider" id="divider"></div>
+
+    <div class="hud">
+      <div class="timer" id="timer">10.0</div>
+      <button class="startBtn" id="startBtn">開始</button>
+    </div>
+
+    <div class="result" id="result" style="display:none;">
+      <div id="resultText"></div>
+      <button id="retryBtn">もう一度</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const topHalf = document.getElementById('topHalf');
+  const bottomHalf = document.getElementById('bottomHalf');
+  const divider = document.getElementById('divider');
+  const timerEl = document.getElementById('timer');
+  const startBtn = document.getElementById('startBtn');
+  const result = document.getElementById('result');
+  const resultText = document.getElementById('resultText');
+  const retryBtn = document.getElementById('retryBtn');
+
+  let height = window.innerHeight;
+  let splitY = height / 2;
+  let initialSplit = splitY;
+  let running = false;
+  let timeLeft = 10.0;
+  let timerId = null;
+  const moveStep = Math.max(10, height * 0.02); // 連打1回あたりの動き(px)
+
+  function layout(){
+    height = window.innerHeight;
+    topHalf.style.height = splitY + "px";
+    bottomHalf.style.top = splitY + "px";
+    bottomHalf.style.height = (height - splitY) + "px";
+    divider.style.top = splitY + "px";
+  }
+
+  function startGame(){
+    splitY = height / 2;
+    initialSplit = splitY;
+    timeLeft = 10.0;
+    running = true;
+    startBtn.disabled = true;
+    result.style.display = "none";
+    layout();
+    timerEl.textContent = timeLeft.toFixed(1);
+
+    timerId = setInterval(()=>{
+      if(!running)return;
+      timeLeft -= 0.1;
+      if(timeLeft <= 0){
+        timeLeft = 0;
+        endGame();
+      }
+      timerEl.textContent = timeLeft.toFixed(1);
+    },100);
+  }
+
+  function endGame(){
+    running = false;
+    clearInterval(timerId);
+    startBtn.disabled = false;
+
+    let winner;
+    if(splitY > initialSplit + 1) winner = "赤（上）の勝ち！";
+    else if(splitY < initialSplit - 1) winner = "青（下）の勝ち！";
+    else winner = "引き分け！";
+
+    resultText.textContent = winner;
+    result.style.display = "flex";
+  }
+
+  // 赤をクリック（タッチ）で線を下へ押す
+  topHalf.addEventListener("click", ()=>{
+    if(!running)return;
+    splitY += moveStep;
+    if(splitY > height) splitY = height;
+    layout();
+  });
+  topHalf.addEventListener("touchstart", (e)=>{
+    if(!running)return;
+    e.preventDefault();
+    splitY += moveStep;
+    if(splitY > height) splitY = height;
+    layout();
+  });
+
+  // 青をクリック（タッチ）で線を上へ押す
+  bottomHalf.addEventListener("click", ()=>{
+    if(!running)return;
+    splitY -= moveStep;
+    if(splitY < 0) splitY = 0;
+    layout();
+  });
+  bottomHalf.addEventListener("touchstart", (e)=>{
+    if(!running)return;
+    e.preventDefault();
+    splitY -= moveStep;
+    if(splitY < 0) splitY = 0;
+    layout();
+  });
+
+  startBtn.addEventListener("click", startGame);
+  retryBtn.addEventListener("click", startGame);
+  window.addEventListener("resize", layout);
+
+  layout();
+})();
+</script>
+</body>
+</html>
